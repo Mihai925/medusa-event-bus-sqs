@@ -1,0 +1,24 @@
+{
+  "name": "@medusajs/event-bus-sqs",
+  "version": "1.0.0",
+  "description": "Local Event Bus Module for Medusa",
+  "license": "MIT",
+  "devDependencies": {
+    "@medusajs/framework": "2.13.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Mihai Jiplea",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "@medusajs/framework": "2.13.1"
+  }
+}
