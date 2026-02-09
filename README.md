@@ -1,7 +1,5 @@
 # medusa-event-bus-sqs
 
-![Medusa](https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png)
-
 ## Overview
 
 **UNOFFICIAL PLUGIN** - This is a community-created plugin for Medusa and is not officially supported by the Medusa team.
