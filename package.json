@@ -1,5 +1,5 @@
 {
-  "name": "@medusajs/event-bus-sqs",
+  "name": "medusa-event-bus-sqs",
   "version": "1.0.0",
   "description": "SQS Event Bus Module for Medusa",
   "main": "dist/index.js",
