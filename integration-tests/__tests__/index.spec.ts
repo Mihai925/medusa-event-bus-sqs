@@ -3,6 +3,13 @@ import SqsEventBusService from "../../src/services/event-bus-sqs"
 // Mock the SQS client
 const mockSend = jest.fn().mockResolvedValue({})
 
+// Helper to filter out polling calls from assertions
+const getNonPollingCalls = () => {
+  return mockSend.mock.calls.filter(call => 
+    call[0]._type !== "ReceiveMessageCommand"
+  )
+}
+
 jest.mock("@aws-sdk/client-sqs", () => {
   return {
     SQSClient: jest.fn().mockImplementation(() => ({
@@ -44,6 +51,9 @@ function createEventBus() {
     { worker_mode: "worker" } as any
   )
 
+  // Stop polling to isolate emit functionality in tests
+  service.stopPolling()
+
   return { service, logger }
 }
 
@@ -66,9 +76,10 @@ describe("Event Bus SQS Service", () => {
       },
     })
 
-    expect(mockSend).toHaveBeenCalledTimes(1)
+    const nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(1)
 
-    const sentCommand = mockSend.mock.calls[0][0]
+    const sentCommand = nonPollingCalls[0][0]
     expect(sentCommand._type).toBe("SendMessageCommand")
 
     const body = JSON.parse(sentCommand.input.MessageBody)
@@ -98,14 +109,16 @@ describe("Event Bus SQS Service", () => {
       },
     })
 
-    expect(mockSend).toHaveBeenCalledTimes(0)
+    let nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(0)
 
     // Release grouped events - should now send to SQS
     await service.releaseGroupedEvents("123")
 
-    expect(mockSend).toHaveBeenCalledTimes(1)
+    nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(1)
 
-    const sentCommand = mockSend.mock.calls[0][0]
+    const sentCommand = nonPollingCalls[0][0]
     const body = JSON.parse(sentCommand.input.MessageBody)
     expect(body).toEqual({
       name: "test",
@@ -132,13 +145,15 @@ describe("Event Bus SQS Service", () => {
       },
     })
 
-    expect(mockSend).toHaveBeenCalledTimes(0)
+    let nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(0)
 
     await service.clearGroupedEvents("123")
     await service.releaseGroupedEvents("123")
 
     // Nothing should have been sent since events were cleared
-    expect(mockSend).toHaveBeenCalledTimes(0)
+    nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(0)
   })
 
   it("should clear grouped events with event names", async () => {
@@ -162,7 +177,8 @@ describe("Event Bus SQS Service", () => {
     await service.releaseGroupedEvents("123")
 
     // Nothing should have been sent since events were cleared by name
-    expect(mockSend).toHaveBeenCalledTimes(0)
+    const nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(0)
   })
 
   it("should batch emit events in groups of 10", async () => {
@@ -177,11 +193,12 @@ describe("Event Bus SQS Service", () => {
     await service.emit(events)
 
     // Should send 2 batch commands (10 + 5)
-    expect(mockSend).toHaveBeenCalledTimes(2)
-    expect(mockSend.mock.calls[0][0]._type).toBe("SendMessageBatchCommand")
-    expect(mockSend.mock.calls[0][0].input.Entries).toHaveLength(10)
-    expect(mockSend.mock.calls[1][0]._type).toBe("SendMessageBatchCommand")
-    expect(mockSend.mock.calls[1][0].input.Entries).toHaveLength(5)
+    const nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(2)
+    expect(nonPollingCalls[0][0]._type).toBe("SendMessageBatchCommand")
+    expect(nonPollingCalls[0][0].input.Entries).toHaveLength(10)
+    expect(nonPollingCalls[1][0]._type).toBe("SendMessageBatchCommand")
+    expect(nonPollingCalls[1][0].input.Entries).toHaveLength(5)
   })
 
   it("should process received SQS messages and dispatch to subscribers", async () => {
@@ -207,7 +224,8 @@ describe("Event Bus SQS Service", () => {
     })
 
     // Should have called DeleteMessage
-    expect(mockSend).toHaveBeenCalledTimes(1)
-    expect(mockSend.mock.calls[0][0]._type).toBe("DeleteMessageCommand")
+    const nonPollingCalls = getNonPollingCalls()
+    expect(nonPollingCalls).toHaveLength(1)
+    expect(nonPollingCalls[0][0]._type).toBe("DeleteMessageCommand")
   })
 })
